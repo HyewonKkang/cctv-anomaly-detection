@@ -1,0 +1,3 @@
+__pycache__/
+input_data/train_frame_features.pkl
+epoch10_temp_weights_c3d.h5

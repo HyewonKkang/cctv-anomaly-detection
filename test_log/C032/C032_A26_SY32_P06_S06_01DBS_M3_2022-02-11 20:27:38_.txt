@@ -1,0 +1,7 @@
+Start time : 2022-02-11 20:00:44.022823
+
+Target file: 
+C032_A26_SY32_P06_S06_01DBS,
+Prediction : C032  Correct: C032
+
+Finish time: 2022-02-11 20:27:39.013088
