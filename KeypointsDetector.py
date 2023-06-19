@@ -50,6 +50,9 @@ def draw_plot(landmark_pos):
 
 def get_keypoints(RGB):
     results = pose.process(RGB)
+    if results.pose_landmarks == None:
+      return {}
+
     landmarks = results.pose_landmarks.landmark
 
     landmark_pos = {
@@ -92,6 +95,8 @@ def get_keypoints(RGB):
 
 def keypoint_detector(RGB):
    landmark_pos = get_keypoints(RGB)
+   if not landmark_pos:
+    return []
    # draw_plot(landmark_pos)
 
    keypoints_index = ['Nose', 'Neck', 'RShoulder', 'RElbow', 'RWrist', 'LShoulder', 'LElbow', 'LWrist', 'MidHip',
@@ -99,8 +104,9 @@ def keypoint_detector(RGB):
 
    result = []
    for idx in keypoints_index:
-     result.append([landmark_pos[idx][0], landmark_pos[idx][1]])
+      result.append([landmark_pos[idx][0], landmark_pos[idx][1]])
 
    return result
+
 
 
