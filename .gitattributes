@@ -1,0 +1,2 @@
+input_data/epoch10_temp_weights_c3d.h5 filter=lfs diff=lfs merge=lfs -text
+input_data/train_frame_features.pkl filter=lfs diff=lfs merge=lfs -text
