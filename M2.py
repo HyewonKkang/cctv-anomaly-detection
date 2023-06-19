@@ -1,4 +1,4 @@
-    
+
 import json
 import tensorflow as tf
 from tensorflow import keras
@@ -15,7 +15,7 @@ import glob
 import time
 import random
 import pickle
-train_df = pd.DataFrame()     #train 파일 내의 모든 json 경로와 라벨값 
+train_df = pd.DataFrame()     #train 파일 내의 모든 json 경로와 라벨값
 MAX_IMAGE_WIDTH = 320
 MAX_IMAGE_HEIGHT = 180
 MAX_IMAGE_SIZE = MAX_IMAGE_WIDTH * MAX_IMAGE_HEIGHT
@@ -32,12 +32,12 @@ NUM_FEATURES = 2048
 json_path ='./input_data/'  #기본 json 폴더 위치
 base_path='./input_data/'   #text 파일 위치
 
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
-def get_file_list(check):        #파일 리스트와 라벨 리스트를 동시에 얻는 함수 
+def get_file_list(check):        #파일 리스트와 라벨 리스트를 동시에 얻는 함수
     ff = open('./input_data/trainfile.txt' ,'r')
     lines = ff.readlines()
-    num = len(lines)    
+    num = len(lines)
     label_index = []
     for line in lines:
         label = line.split(' ')[1]
@@ -83,17 +83,17 @@ def make_bitmap(a,b):
     targetArray= np.reshape(targetArray, (MAX_IMAGE_HEIGHT,MAX_IMAGE_WIDTH))
     data = im.fromarray(targetArray)
     data = data.convert('RGB')
-    return data          
+    return data
 
 
 def setBoldPoint(targetList, x,y):
     if x<0 or y <0 or x >= MAX_IMAGE_WIDTH or y >= MAX_IMAGE_HEIGHT:
-        return 
+        return
     if y-1 >= 0 and x-1 >= 0 : #x와 y가 1보다 크면
         targetList[MAX_IMAGE_WIDTH * (y-1) + (x-1)] = 255
     if y-1 >= 0 :  #y좌표가 1보다 크면
         targetList[MAX_IMAGE_WIDTH * (y-1) + (x)] = 255
-    if y-1 >= 0 and x+1 < MAX_IMAGE_WIDTH:    
+    if y-1 >= 0 and x+1 < MAX_IMAGE_WIDTH:
         targetList[MAX_IMAGE_WIDTH * (y-1) + (x+1)] = 255
     if x-1 >= 0 :
         targetList[MAX_IMAGE_WIDTH * (y) + (x-1)] = 255
@@ -103,52 +103,49 @@ def setBoldPoint(targetList, x,y):
     if y+1 < MAX_IMAGE_HEIGHT and x-1 >= 0 :
         targetList[MAX_IMAGE_WIDTH * (y+1) + (x-1)] = 255
     if y+1 < MAX_IMAGE_HEIGHT:
-        targetList[MAX_IMAGE_WIDTH * (y+1) + (x)] = 255    
+        targetList[MAX_IMAGE_WIDTH * (y+1) + (x)] = 255
     if y+1 < MAX_IMAGE_HEIGHT and  x+1 < MAX_IMAGE_WIDTH:
         targetList[MAX_IMAGE_WIDTH * (y+1) + (x+1)] = 255
     return targetList
 
 
-def extract_skeleton(path):  #json에서 skeleton point를 뽑는다. 
+def extract_skeleton(path, keypoints_set):  #json에서 skeleton point를 뽑는 대신 M1에서 추출된 keypoint를 이용한다.
     empty_list_x=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     empty_list_y=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     image_frame_list= []
-    with open(path,'r') as f: #동영상 하나
-        json_file = json.load(f)
-    image_frame_list=[]    
-    for frame in json_file['file'][0]['frames']:  #동영상 하나
+    # with open(path,'r') as f: #동영상 하나
+    #     json_file = json.load(f)
+    image_frame_list=[]
+    for keypoints in keypoints_set:  #동영상 하나
         point1 = []
         point2 = []
-        point3 = []
-        point4 = []
-        person_length = len(frame['persons'])
-        if person_length ==0:
+        # point3 = []
+        # point4 = []
+        person_length = len(keypoints)
+        # 사람이 0-1명인 경우에만 적용
+        if person_length == 0:
             data = make_bitmap(empty_list_x+empty_list_x,empty_list_y+empty_list_y)
-        elif person_length==1:
-            a=frame['persons'][0]['keypoints']
-            point1 = [int(float(point.split(',')[0])//RESCALE) for point in a]
-            point2 = [int(float(point.split(',')[1])//RESCALE) for point in a]
+        elif person_length == 1:
+            point1 = [int(float(point.split(',')[0])//RESCALE) for point in keypoints]
+            point2 = [int(float(point.split(',')[1])//RESCALE) for point in keypoints]
             data = make_bitmap(point1+empty_list_x , point2+empty_list_y)
-        else:
-            a=frame['persons'][0]['keypoints']
-            b=frame['persons'][1]['keypoints'] 
+        # else:
+        #     a=frame['persons'][0]['keypoints']
+        #     b=frame['persons'][1]['keypoints']
 
-            point1 = [int(float(point.split(',')[0])//RESCALE) for point in a]
-            point2 = [int(float(point.split(',')[1])//RESCALE) for point in a]
-            point3 = [int(float(point.split(',')[0])//RESCALE) for point in b]
-            point4 = [int(float(point.split(',')[1])//RESCALE) for point in b]
+        #     point1 = [int(float(point.split(',')[0])//RESCALE) for point in a]
+        #     point2 = [int(float(point.split(',')[1])//RESCALE) for point in a]
+        #     point3 = [int(float(point.split(',')[0])//RESCALE) for point in b]
+        #     point4 = [int(float(point.split(',')[1])//RESCALE) for point in b]
 
-            data = make_bitmap(point1+point3,point2+point4)     
-        image_frame_list.append(data)     
-        
+        #     data = make_bitmap(point1+point3,point2+point4)
+        image_frame_list.append(data)
+
     return image_frame_list
-
-
-
 
 # Utility for our sequence model.
 def get_sequence_model():
-    
+
     class_vocab = label_processor.get_vocabulary()
 
     frame_features_input = keras.Input((MAX_SEQ_LENGTH, NUM_FEATURES))
@@ -163,7 +160,7 @@ def get_sequence_model():
     x = keras.layers.Dropout(0.4)(x)
     x = keras.layers.Dense(8, activation="relu")(x)
     output = keras.layers.Dense(21, activation="softmax")(x)
-    
+
     rnn_model = keras.Model([frame_features_input, mask_input], output)
 
     rnn_model.compile(
@@ -192,30 +189,30 @@ def sequence_prediction(path , sequence_model):
 
     frame_features, frame_mask = prepare_single_video(frames , feature_extractor)
     probabilities = sequence_model.predict([frame_features, frame_mask])[0]
-    
+
     for i in np.argsort(probabilities)[::-1]:
         #print(i)
         #print(f"  {class_vocab[i]}: {probabilities[i] * 100:5.2f}%")
-        
-        return int(class_vocab[i])-1
-    
-def M2_test(path ) :
 
-    test_file = extract_skeleton(path)   
+        return int(class_vocab[i])-1
+
+def M2_test(path, keypoints) :
+
+    test_file = extract_skeleton(path, keypoints)
     with open('./input_data/train_frame_features.pkl','rb') as f:
         tr_frame_features = pickle.load(f)
-    
+
     with open('./input_data/train_frame_masks.pkl','rb') as f:
         tr_frame_masks = pickle.load(f)
-        
+
     with open('./input_data/train_labels.pkl','rb') as f:
         tr_frame_label = pickle.load(f)
-       
+
     train_data = (tr_frame_features,tr_frame_masks)
-    train_labels = tr_frame_label                                                                                                                                               
+    train_labels = tr_frame_label
 
     #b=  ['', '1\n', '10\n', '11\n', '12\n', '13\n', '14\n', '15\n', '16\n', '17\n', '18\n', '19\n', '2\n', '3\n', '4\n', '5\n', '6\n', '7\n', '8\n', '9\n']
-    
+
     label_processor = tf.keras.layers.experimental.preprocessing.StringLookup(
         num_oov_indices=0, vocabulary=np.unique(train_df['label'])
     )
@@ -228,7 +225,8 @@ def M2_test(path ) :
     sequence_model.load_weights('./input_data/seq_model.h5')
     file= np.array([np.array(a) for a in test_file])
     test_frames = sequence_prediction(file ,sequence_model )  #테스트
-    
+
     return test_frames
-    
-    
+
+
+

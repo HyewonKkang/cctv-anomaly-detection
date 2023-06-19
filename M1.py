@@ -16,7 +16,8 @@ import time
 from keras.layers import Dense,Dropout,Conv3D,Input,MaxPool3D,Flatten,Activation
 from keras.regularizers import l2
 from keras.models import Model
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
+from KeypointsDetector import *
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def c3d_model():
@@ -60,11 +61,11 @@ def c3d_model():
 def M1_test(path):
     now = datetime.now()
     times = str(now)
-    test_date=str(datetime.today().month) +'.'+ str(datetime.today().day)  
+    test_date=str(datetime.today().month) +'.'+ str(datetime.today().day)
     print(path)
     video_name=path.split('/')[-1]
-    
-    
+
+
     fm=open('./input_data/index.txt', 'r')
     main_names = fm.readlines()
     CATEGORY = video_name[0:4]
@@ -72,8 +73,8 @@ def M1_test(path):
         os.mkdir('./test_log')
     if not os.path.exists('./test_log/'+CATEGORY):
         os.mkdir('./test_log/'+CATEGORY)
-    
-    file_name = video_name.split('.')[0]      
+
+    file_name = video_name.split('.')[0]
     fw =open('./test_log/'+CATEGORY+'/'+file_name+'_M1_'+times[0:19]+'_.txt', 'w')
     # init model
     model = c3d_model()
@@ -85,12 +86,13 @@ def M1_test(path):
     cap = cv2.VideoCapture(path)
     fps = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(3))
-    height = int(cap.get(4))  
-    
+    height = int(cap.get(4))
+
     clip = []
     main_count_list = [0 for i in range(len(main_names))]
     scene=0
     start = time.time()
+    keypoints = []
     for i in tqdm(range(fps)):
         ret, frame = cap.read()
         if ret:
@@ -108,29 +110,38 @@ def M1_test(path):
                 inputs = inputs[:,:,8:120,30:142,:]
                 inputs = np.transpose(inputs, (0, 2, 3, 1, 4))
 
-                
+
                 pred_main = model.predict(inputs)
-                main_label = np.argmax(pred_main[0])        
+                main_label = np.argmax(pred_main[0])
                 main_count_list[main_label]=main_count_list[main_label]+1
                 fw.write(main_names[main_label].split(' ')[1].strip()+" prob: %.4f" % pred_main[0][main_label]+'\n')
                 clip.pop(0)
-        
-    end = datetime.now()    
+
+            # detect keypoints by mp
+            kps = keypoint_detector(tmp)
+            if len(kps) != 0:
+                keypoints.append(keypoint_detector(tmp))
+            else:
+                keypoints.append([])
+
+
+    end = datetime.now()
     end_time = str(end)
     ftw = open('./test_log/'+CATEGORY+'/'+file_name+'_M1_'+end_time[0:19]+'_total.txt', 'w')
     ftw.write(video_name+'\n')
     ftw.write('영상 '+str(fps-15)+' 프레임 중 ')
-    main_mode_label = np.argmax(main_count_list)    
+    main_mode_label = np.argmax(main_count_list)
     ftw.write(main_names[main_mode_label].split(' ')[-1].strip()+" 검출 "+str(main_count_list[main_mode_label])+" 프레임 ")\
-    
+
     main_frame_prod=main_count_list[main_mode_label]/(fps-15)*100
-    
+
     return_value =main_names[main_mode_label].split(' ')[-1].strip()
     ftw.write(str(int(main_frame_prod))+'%\n')
     for corr_main_label in range(len(main_names)):
         if video_name==main_names[corr_main_label].split(' ')[-1].strip()!=main_names[main_mode_label].split(' ')[-1].strip():
             main_frame_prod=main_count_list[corr_main_label]/(fps-15)*100
             ftw.write('\t\t\t\t\t\t\t'+main_names[corr_main_label].split(' ')[-1].strip()+" 검출 "+str(main_count_list[corr_main_label])+" 프레임 "+str(int(main_frame_prod))+'%\n')
-    return return_value
-            
-        
+    return (return_value, keypoints)
+
+
+
